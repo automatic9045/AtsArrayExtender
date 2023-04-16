@@ -18,6 +18,7 @@ namespace AtsArrayExtender
 {
     public class InputDevice : IInputDevice
     {
+        private static readonly Assembly BveAssembly;
         private static readonly Type[] PluginLoaderConstructorParamTypes;
 
         static InputDevice()
@@ -26,15 +27,24 @@ namespace AtsArrayExtender
             Debugger.Launch();
 #endif
 
+            BveAssembly = Assembly.GetEntryAssembly();
+            string bveAssemblyLocation = Path.GetDirectoryName(BveAssembly.Location);
+
             Assembly assembly = Assembly.GetExecutingAssembly();
             string searchLocation = Path.Combine(Path.GetDirectoryName(assembly.Location), "AtsArrayExtender");
 
             AppDomain.CurrentDomain.AssemblyResolve += (sender, e) =>
             {
                 AssemblyName assemblyName = new AssemblyName(e.Name);
-                string assemblyPath = Path.Combine(searchLocation, assemblyName.Name + ".dll");
+                Assembly result = TryLoadAssembly(bveAssemblyLocation) ?? TryLoadAssembly(searchLocation);
+                return result;
 
-                return File.Exists(assemblyPath) ? Assembly.LoadFrom(assemblyPath) : null;
+
+                Assembly TryLoadAssembly(string location)
+                {
+                    string assemblyPath = Path.Combine(location, assemblyName.Name + ".dll");
+                    return File.Exists(assemblyPath) ? Assembly.LoadFrom(assemblyPath) : null;
+                }
             };
 
             PluginLoaderConstructorParamTypes = GetPluginLoaderConstructorParamTypes();
